@@ -4,6 +4,8 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt import JWT, jwt_required, current_identity
+import datetime
+
 
 #endregion
 
@@ -234,15 +236,18 @@ identif_s_schema = identifSchema(many=True)
 
 app.config['SECRET_KEY'] = 'wefawnefWAEFwaefu43655$&#45623463rgGSEggs'
 
+app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(days=1)
+
 def authenticate(username, password):
     user = identif.query.filter_by(ECORREO = username).first()
 
     if user is not None and user.PSSWORD == hashlib.sha1(password.encode('utf-8')).hexdigest():
+        user.id = user.USUARIO
         return user
 
 def identity(payload):
     user_id = payload['identity']
-    return identif.query.filter_by(ECORREO = user_id).first()
+    return identif.query.filter_by(USUARIO = user_id).first()
 
 jwt = JWT(app, authenticate, identity)
 
