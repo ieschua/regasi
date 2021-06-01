@@ -4,9 +4,8 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt import JWT, jwt_required, current_identity
+from flask_cors import CORS, cross_origin
 import datetime
-
-
 #endregion
 
 
@@ -233,6 +232,14 @@ identif_s_schema = identifSchema(many=True)
 #endregion
 
 
+#region Configuracion CORS
+
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+#endregion
+
+
 #region Configuracion JWT
 
 app.config['SECRET_KEY'] = 'wefawnefWAEFwaefu43655$&#45623463rgGSEggs'
@@ -240,7 +247,7 @@ app.config['SECRET_KEY'] = 'wefawnefWAEFwaefu43655$&#45623463rgGSEggs'
 app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(days=1)
 
 def authenticate(username, password):
-    user = identif.query.filter_by(ECORREO = username).first()
+    user = identif.query.filter_by(USUARIO = username).first()
 
     if user is not None and user.PSSWORD == hashlib.sha1(password.encode('utf-8')).hexdigest():
         user.id = user.USUARIO
@@ -323,6 +330,15 @@ def index():
 #region usuarios
 
 
+
+#endregion
+
+#region develop routes
+
+@app.route('/protected')
+@jwt_required()
+def protected():
+    return identif_schema.jsonify(current_identity)
 
 #endregion
 
