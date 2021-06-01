@@ -3,7 +3,10 @@ import hashlib
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
+from flask_jwt import JWT, jwt_required, current_identity
+
 #endregion
+
 
 #region Cadenas de conexion
 
@@ -17,12 +20,13 @@ from flask_marshmallow import Marshmallow
 
 #region Configuración de conexión
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:hC5K*M0OSvrNjxaI@localhost/dbregasi' #Cadena de conexion
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://ufm6ohqpk3z6u01x:vmqMrny5SSm375jCdag0@bbz9acjqx8sgk9hqdcgl-mysql.services.clever-cloud.com:3306/bbz9acjqx8sgk9hqdcgl' #Cadena de conexion
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app) #Interactuar con la db
 ma = Marshmallow(app) #Definir esquema de interaccion
 #endregion
+
 
 #region Especificacion de la base de datos 
 class cestads(db.Model):
@@ -156,6 +160,7 @@ db.create_all()
 
 #endregion
 
+
 #region Esquemas
 #Definicion de Esquemas
 class cestadsSchema(ma.Schema):
@@ -224,7 +229,30 @@ identif_s_schema = identifSchema(many=True)
 
 #endregion
 
+
+#region Configuracion JWT
+
+app.config['SECRET_KEY'] = 'wefawnefWAEFwaefu43655$&#45623463rgGSEggs'
+
+def authenticate(username, password):
+    user = identif.query.filter_by(ECORREO = username).first()
+
+    if user is not None and user.PSSWORD == hashlib.sha1(password.encode('utf-8')).hexdigest():
+        return user
+
+def identity(payload):
+    user_id = payload['identity']
+    return identif.query.filter_by(ECORREO = user_id).first()
+
+jwt = JWT(app, authenticate, identity)
+
+#endregion
+
+
 #region Rutas
+
+
+#region idenfis
 #Definicion de rutas "Endpoints"
 @app.route('/identifs', methods=['POST'])
 def create_identif():
@@ -242,6 +270,7 @@ def create_identif():
   return identif_schema.jsonify(new_identif)
 
 @app.route('/identifs', methods=['GET'])
+@jwt_required()
 def get_identifs():
   all_identifs = identif.query.all()
   result = identif_s_schema.dump(all_identifs)
@@ -283,8 +312,16 @@ def delete_task(NIDCRED, CCVEEMP):
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({'Message': 'GET Works'})
+#endregion
+
+#region usuarios
+
+
 
 #endregion
+
+#endregion
+
 
 # Inicio de Aplicación
 if __name__ == "__main__":
