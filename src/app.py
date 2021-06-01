@@ -15,7 +15,6 @@ from flask_marshmallow import Marshmallow
 
 #endregion
 
-
 #region Configuración de conexión
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:hC5K*M0OSvrNjxaI@localhost/dbregasi' #Cadena de conexion
