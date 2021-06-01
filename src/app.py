@@ -19,10 +19,9 @@ import datetime
 
 #endregion
 
-
 #region Configuración de conexión
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://ufm6ohqpk3z6u01x:vmqMrny5SSm375jCdag0@bbz9acjqx8sgk9hqdcgl-mysql.services.clever-cloud.com:3306/bbz9acjqx8sgk9hqdcgl' #Cadena de conexion
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:hC5K*M0OSvrNjxaI@localhost/dbregasi' #Cadena de conexion
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app) #Interactuar con la db
@@ -265,7 +264,7 @@ jwt = JWT(app, authenticate, identity)
 #region Rutas
 
 
-#region idenfis
+#region identifs
 #Definicion de rutas "Endpoints"
 @app.route('/identifs', methods=['POST'])
 def create_identif():
@@ -329,7 +328,69 @@ def index():
 
 #region usuarios
 
+@app.route('/myuser/<CCVEEMP>', methods=['GET'])
+def get_user(CCVEEMP):
+  ddatemp_v = ddatemp.query.get(CCVEEMP)
+  ddatemp_v = ddatemp.query.with_entities(ddatemp.CCVEEMP, ddatemp.CNOMBRE, ddatemp.CAPEUNO, ddatemp.CAPEDOS, ddatemp.CSTATUS).filter(ddatemp.CCVEEMP == CCVEEMP)
+  return ddatemp_schema.jsonify(ddatemp_v)
 
+#endregion
+
+#region horarios
+
+@app.route('/horarios', methods=['POST'])
+def create_horario():
+  NIDHORA = request.json['NIDHORA']
+  NDIASEM = request.json['NDIASEM']
+  CHORENT = request.json['CHORENT']
+  CHORSAL = request.json['CHORSAL']
+  CSTATUS = request.json['CSTATUS']
+
+  new_horario = ddethor(NIDHORA, NDIASEM, CHORENT, CHORSAL, CSTATUS)
+
+  db.session.add(new_horario)
+  db.session.commit()
+
+  return ddethor_schema.jsonify(new_horario)
+
+@app.route('/horarios', methods=['GET'])
+def get_horarios():
+  all_horarios = ddethor.query.all()
+  result = ddethor_s_schema.dump(all_horarios)
+  return jsonify(result)
+
+@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['GET'])
+def get_horario(NDIASEM, NIDHORA):
+  horario = ddethor.query.get((NDIASEM, NIDHORA))
+  return ddethor_schema.jsonify(horario)
+
+@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['PUT'])
+def update_horario(NDIASEM, NIDHORA):
+  horario = ddethor.query.get((NDIASEM, NIDHORA))
+
+  NIDHORA_R = request.json['NIDHORA']
+  NDIASEM_R = request.json['NDIASEM']
+  CHORENT = request.json['CHORENT']
+  CHORSAL = request.json['CHORSAL']
+  CSTATUS = request.json['CSTATUS']
+
+  horario.NIDHORA = NIDHORA
+  horario.NDIASEM = NDIASEM
+  horario.CHORENT = CHORENT
+  horario.CHORSAL = CHORSAL
+  horario.CSTATUS = CSTATUS
+
+  db.session.commit()
+
+  return ddethor_schema.jsonify(horario)
+
+@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['DELETE'])
+def delete_horario(NDIASEM, NIDHORA):
+  horario = ddethor.query.get((NDIASEM, NIDHORA))
+  db.session.delete(horario)
+  db.session.commit()
+  
+  return ddethor_schema.jsonify(horario)
 
 #endregion
 
