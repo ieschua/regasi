@@ -1,6 +1,6 @@
 #region Paquetes
 import hashlib
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt import JWT, jwt_required, current_identity
@@ -20,8 +20,8 @@ import datetime
 #endregion
 
 #region Configuración de conexión
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:hC5K*M0OSvrNjxaI@localhost/dbregasi' #Cadena de conexion
+app = Flask(__name__, static_url_path='')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://ufm6ohqpk3z6u01x:vmqMrny5SSm375jCdag0@bbz9acjqx8sgk9hqdcgl-mysql.services.clever-cloud.com:3306/bbz9acjqx8sgk9hqdcgl' #Cadena de conexion
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app) #Interactuar con la db
@@ -320,10 +320,6 @@ def delete_task(NIDCRED, CCVEEMP):
   db.session.commit()
   
   return identif_schema.jsonify(identif_v)
-
-@app.route('/', methods=['GET'])
-def index():
-    return jsonify({'Message': 'GET Works'})
 #endregion
 
 #region usuarios
@@ -331,7 +327,6 @@ def index():
 @app.route('/myuser/<CCVEEMP>', methods=['GET'])
 def get_user(CCVEEMP):
   ddatemp_v = ddatemp.query.get(CCVEEMP)
-  ddatemp_v = ddatemp.query.with_entities(ddatemp.CCVEEMP, ddatemp.CNOMBRE, ddatemp.CAPEUNO, ddatemp.CAPEDOS, ddatemp.CSTATUS).filter(ddatemp.CCVEEMP == CCVEEMP)
   return ddatemp_schema.jsonify(ddatemp_v)
 
 #endregion
@@ -403,9 +398,13 @@ def protected():
 
 #endregion
 
+@app.route('/', methods=['GET'])
+def index():
+    return render_template("index.html")
+
 #endregion
 
 
 # Inicio de Aplicación
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=5000, debug=False)
