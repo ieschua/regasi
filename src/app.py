@@ -7,6 +7,8 @@ from flask_jwt import JWT, jwt_required, current_identity
 from flask_cors import CORS, cross_origin
 from whitenoise import WhiteNoise
 import datetime
+import simplejson as json
+
 #endregion
 
 
@@ -33,7 +35,7 @@ ma = Marshmallow(app) #Definir esquema de interaccion
 
 #region Especificacion de la base de datos 
 class cestads(db.Model):
-    NIDESTA = db.Column(db.DECIMAL(2,0), nullable = False, primary_key = True)
+    NIDESTA = db.Column(db.Numeric(2,0), nullable = False, primary_key = True)
     CNOMEST = db.Column(db.VARCHAR(25), nullable = True)
 
     def __init__(self, NIDESTA, CNOMEST):
@@ -41,7 +43,7 @@ class cestads(db.Model):
         self.CNOMEST = CNOMEST
 
 class chorars(db.Model):
-    NIDHORA = db.Column(db.DECIMAL(5,0), nullable = False, primary_key = True)
+    NIDHORA = db.Column(db.Numeric(5,0), nullable = False, primary_key = True)
     CDESCHR = db.Column(db.VARCHAR(100), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
 
@@ -51,8 +53,8 @@ class chorars(db.Model):
         self.CSTATUS = CSTATUS
 
 class cmunics(db.Model):
-    NIDMUNI = db.Column(db.DECIMAL(4,0), nullable = False, primary_key = True)
-    NIDESTA = db.Column(db.DECIMAL(2,0), db.ForeignKey('cestads.NIDESTA'), nullable = False, primary_key = True)
+    NIDMUNI = db.Column(db.Numeric(4,0), nullable = False, primary_key = True)
+    NIDESTA = db.Column(db.Numeric(2,0), db.ForeignKey('cestads.NIDESTA'), nullable = False, primary_key = True)
     CNOMMUN = db.Column(db.VARCHAR(50), nullable = True)
 
     def __init__(self, NIDESTA, NIDMUNI, CNOMMUN):
@@ -72,8 +74,8 @@ class ddatemp(db.Model):
     CNUMINT = db.Column(db.VARCHAR(15), nullable = True)
     CCOLONI = db.Column(db.VARCHAR(50), nullable = True)
     CCODPOS = db.Column(db.CHAR(5), nullable = True)
-    NIDESTA = db.Column(db.DECIMAL(2,0), db.ForeignKey('cmunics.NIDESTA'), nullable = True)
-    NIDMUNI = db.Column(db.DECIMAL(4,0), db.ForeignKey('cmunics.NIDMUNI'), nullable = True)
+    NIDESTA = db.Column(db.Numeric(2,0), db.ForeignKey('cmunics.NIDESTA'), nullable = True)
+    NIDMUNI = db.Column(db.Numeric(4,0), db.ForeignKey('cmunics.NIDMUNI'), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
 
     def __init__(self, CCVEEMP, CNOMBRE, CAPEUNO, CAPEDOS, CCURPEM, DFECING, CNMCALL, CNUMEXT, CNUMINT, CCOLONI, CCODPOS, NIDESTA, NIDMUNI, CSTATUS):
@@ -93,8 +95,8 @@ class ddatemp(db.Model):
         self.CSTATUS = CSTATUS
 
 class ddethor(db.Model):
-    NIDHORA = db.Column(db.DECIMAL(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
-    NDIASEM = db.Column(db.DECIMAL(1,0), nullable = False, primary_key = True)
+    NIDHORA = db.Column(db.Numeric(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
+    NDIASEM = db.Column(db.Numeric(1,0), nullable = False, primary_key = True)
     CHORENT = db.Column(db.CHAR(5), nullable = True)
     CHORSAL = db.Column(db.CHAR(5), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
@@ -107,7 +109,7 @@ class ddethor(db.Model):
         self.CSTATUS = CSTATUS
 
 class dhremps(db.Model):
-    NIDHORA = db.Column(db.DECIMAL(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
+    NIDHORA = db.Column(db.Numeric(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
     CCVEEMP = db.Column(db.CHAR(6), db.ForeignKey('ddatemp.CCVEEMP'), nullable = False, primary_key = True)
     DFECAIS = db.Column(db.DATE, nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
@@ -122,7 +124,7 @@ class dhremps(db.Model):
 class pregasi(db.Model):
     CCVEEMP = db.Column(db.CHAR(6), db.ForeignKey('ddatemp.CCVEEMP'), nullable = False, primary_key = True)
     DFECREG = db.Column(db.DATETIME, nullable = False, primary_key = True)
-    CNUMBIO = db.Column(db.DECIMAL(2,0), nullable = True)
+    CNUMBIO = db.Column(db.Numeric(2,0), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
 
     def __init__(self, CCVEEMP, DFECREG, CNUMBIO, CSTATUS):
@@ -213,6 +215,8 @@ cmunics_schema = cmunicsSchema()
 cmunics_s_schema = cmunicsSchema(many=True)
 
 ddatemp_schema = ddatempSchema()
+user_data = ['CCVEEMP','CNOMBRE', 'CAPEUNO', 'CAPEDOS', 'CSTATUS']
+ddatemp_user_schema = ddatempSchema(many = False, only = user_data)
 ddatemp_s_schema = ddatempSchema(many=True)
 
 ddethor_schema = ddethorSchema()
@@ -328,8 +332,7 @@ def delete_task(NIDCRED, CCVEEMP):
 @app.route('/myuser/<CCVEEMP>', methods=['GET'])
 def get_user(CCVEEMP):
   ddatemp_v = ddatemp.query.get(CCVEEMP)
-  return ddatemp_schema.jsonify(ddatemp_v)
-
+  return json.dumps(ddatemp_user_schema.dump(ddatemp_v))
 #endregion
 
 #region horarios
@@ -346,26 +349,25 @@ def create_horario():
 
   db.session.add(new_horario)
   db.session.commit()
-
-  return ddethor_schema.jsonify(new_horario)
+  return json.dumps(ddethor_schema.dump(new_horario))
 
 @app.route('/horarios', methods=['GET'])
 def get_horarios():
   all_horarios = ddethor.query.all()
   result = ddethor_s_schema.dump(all_horarios)
-  return jsonify(result)
+  return json.dumps(result)
 
-@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['GET'])
-def get_horario(NDIASEM, NIDHORA):
-  horario = ddethor.query.get((NDIASEM, NIDHORA))
-  return ddethor_schema.jsonify(horario)
+@app.route('/horarios/<NIDHORA>/<NDIASEM>', methods=['GET'])
+def get_horario(NIDHORA, NDIASEM):
+  horario = ddethor.query.get((NIDHORA, NDIASEM))
+  return json.dumps(ddethor_schema.dump(horario))
 
-@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['PUT'])
-def update_horario(NDIASEM, NIDHORA):
-  horario = ddethor.query.get((NDIASEM, NIDHORA))
+@app.route('/horarios/<NIDHORA>/<NDIASEM>', methods=['PUT'])
+def update_horario(NIDHORA, NDIASEM):
+  horario = ddethor.query.get((NIDHORA, NDIASEM))
 
-  NIDHORA_R = request.json['NIDHORA']
-  NDIASEM_R = request.json['NDIASEM']
+  NIDHORA = request.json['NIDHORA']
+  NDIASEM = request.json['NDIASEM']
   CHORENT = request.json['CHORENT']
   CHORSAL = request.json['CHORSAL']
   CSTATUS = request.json['CSTATUS']
@@ -378,15 +380,15 @@ def update_horario(NDIASEM, NIDHORA):
 
   db.session.commit()
 
-  return ddethor_schema.jsonify(horario)
+  return json.dumps(ddethor_schema.dump(horario))
 
-@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['DELETE'])
-def delete_horario(NDIASEM, NIDHORA):
-  horario = ddethor.query.get((NDIASEM, NIDHORA))
+@app.route('/horarios/<NIDHORA>/<NDIASEM>', methods=['DELETE'])
+def delete_horario(NIDHORA, NDIASEM):
+  horario = ddethor.query.get((NIDHORA, NDIASEM))
   db.session.delete(horario)
   db.session.commit()
   
-  return ddethor_schema.jsonify(horario)
+  return json.dumps(ddethor_schema.dump(horario))
 
 #endregion
 
