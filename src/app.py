@@ -1,12 +1,12 @@
 #region Paquetes
 import hashlib
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt import JWT, jwt_required, current_identity
+from flask_cors import CORS, cross_origin
 import datetime
 import simplejson as json
-
 
 #endregion
 
@@ -213,6 +213,8 @@ cmunics_schema = cmunicsSchema()
 cmunics_s_schema = cmunicsSchema(many=True)
 
 ddatemp_schema = ddatempSchema()
+user_data = ['CCVEEMP','CNOMBRE', 'CAPEUNO', 'CAPEDOS', 'CSTATUS']
+ddatemp_user_schema = ddatempSchema(many = False, only = user_data)
 ddatemp_s_schema = ddatempSchema(many=True)
 
 ddethor_schema = ddethorSchema()
@@ -233,6 +235,14 @@ identif_s_schema = identifSchema(many=True)
 #endregion
 
 
+#region Configuracion CORS
+
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+#endregion
+
+
 #region Configuracion JWT
 
 app.config['SECRET_KEY'] = 'wefawnefWAEFwaefu43655$&#45623463rgGSEggs'
@@ -240,7 +250,7 @@ app.config['SECRET_KEY'] = 'wefawnefWAEFwaefu43655$&#45623463rgGSEggs'
 app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(days=1)
 
 def authenticate(username, password):
-    user = identif.query.filter_by(ECORREO = username).first()
+    user = identif.query.filter_by(USUARIO = username).first()
 
     if user is not None and user.PSSWORD == hashlib.sha1(password.encode('utf-8')).hexdigest():
         user.id = user.USUARIO
@@ -313,10 +323,6 @@ def delete_task(NIDCRED, CCVEEMP):
   db.session.commit()
   
   return identif_schema.jsonify(identif_v)
-
-@app.route('/', methods=['GET'])
-def index():
-    return jsonify({'Message': 'GET Works'})
 #endregion
 
 #region usuarios
@@ -324,9 +330,7 @@ def index():
 @app.route('/myuser/<CCVEEMP>', methods=['GET'])
 def get_user(CCVEEMP):
   ddatemp_v = ddatemp.query.get(CCVEEMP)
-  #ddatemp_v = ddatemp.query.with_entities(ddatemp.CCVEEMP, ddatemp.CNOMBRE, ddatemp.CAPEUNO, ddatemp.CAPEDOS, ddatemp.CSTATUS).filter(ddatemp.CCVEEMP == CCVEEMP)
-  return json.dumps(ddatemp_schema.dump(ddatemp_v))
-
+  return json.dumps(ddatemp_user_schema.dump(ddatemp_v))
 #endregion
 
 #region horarios
@@ -344,7 +348,7 @@ def create_horario():
   db.session.add(new_horario)
   db.session.commit()
 
-  return ddethor_schema.jsonify(new_horario)
+  return json.dumps(new_horario)
 
 @app.route('/horarios', methods=['GET'])
 def get_horarios():
@@ -387,9 +391,22 @@ def delete_horario(NDIASEM, NIDHORA):
 
 #endregion
 
+#region develop routes
+
+@app.route('/protected')
+@jwt_required()
+def protected():
+    return identif_schema.jsonify(current_identity)
+
+#endregion
+
+@app.route('/', methods=['GET'])
+def index():
+    return render_template("index.html")
+
 #endregion
 
 
 # Inicio de Aplicación
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=5000, debug=False)
