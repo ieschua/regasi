@@ -347,8 +347,7 @@ def create_horario():
 
   db.session.add(new_horario)
   db.session.commit()
-
-  return json.dumps(new_horario)
+  return json.dumps(ddethor_schema.dump(new_horario))
 
 @app.route('/horarios', methods=['GET'])
 def get_horarios():
@@ -356,17 +355,17 @@ def get_horarios():
   result = ddethor_s_schema.dump(all_horarios)
   return json.dumps(result)
 
-@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['GET'])
-def get_horario(NDIASEM, NIDHORA):
-  horario = ddethor.query.get((NDIASEM, NIDHORA))
-  return ddethor_schema.jsonify(horario)
+@app.route('/horarios/<NIDHORA>/<NDIASEM>', methods=['GET'])
+def get_horario(NIDHORA, NDIASEM):
+  horario = ddethor.query.get((NIDHORA, NDIASEM))
+  return json.dumps(ddethor_schema.dump(horario))
 
-@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['PUT'])
-def update_horario(NDIASEM, NIDHORA):
-  horario = ddethor.query.get((NDIASEM, NIDHORA))
+@app.route('/horarios/<NIDHORA>/<NDIASEM>', methods=['PUT'])
+def update_horario(NIDHORA, NDIASEM):
+  horario = ddethor.query.get((NIDHORA, NDIASEM))
 
-  NIDHORA_R = request.json['NIDHORA']
-  NDIASEM_R = request.json['NDIASEM']
+  NIDHORA = request.json['NIDHORA']
+  NDIASEM = request.json['NDIASEM']
   CHORENT = request.json['CHORENT']
   CHORSAL = request.json['CHORSAL']
   CSTATUS = request.json['CSTATUS']
@@ -379,15 +378,15 @@ def update_horario(NDIASEM, NIDHORA):
 
   db.session.commit()
 
-  return ddethor_schema.jsonify(horario)
+  return json.dumps(ddethor_schema.dump(horario))
 
-@app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['DELETE'])
-def delete_horario(NDIASEM, NIDHORA):
-  horario = ddethor.query.get((NDIASEM, NIDHORA))
+@app.route('/horarios/<NIDHORA>/<NDIASEM>', methods=['DELETE'])
+def delete_horario(NIDHORA, NDIASEM):
+  horario = ddethor.query.get((NIDHORA, NDIASEM))
   db.session.delete(horario)
   db.session.commit()
   
-  return ddethor_schema.jsonify(horario)
+  return json.dumps(ddethor_schema.dump(horario))
 
 #endregion
 
