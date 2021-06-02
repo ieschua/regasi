@@ -1,2 +1,4 @@
 requerimientos
 venv
+src/.gitignore
+src/.git
