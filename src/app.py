@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt import JWT, jwt_required, current_identity
 import datetime
+import simplejson as json
 
 
 #endregion
@@ -32,7 +33,7 @@ ma = Marshmallow(app) #Definir esquema de interaccion
 
 #region Especificacion de la base de datos 
 class cestads(db.Model):
-    NIDESTA = db.Column(db.DECIMAL(2,0), nullable = False, primary_key = True)
+    NIDESTA = db.Column(db.Numeric(2,0), nullable = False, primary_key = True)
     CNOMEST = db.Column(db.VARCHAR(25), nullable = True)
 
     def __init__(self, NIDESTA, CNOMEST):
@@ -40,7 +41,7 @@ class cestads(db.Model):
         self.CNOMEST = CNOMEST
 
 class chorars(db.Model):
-    NIDHORA = db.Column(db.DECIMAL(5,0), nullable = False, primary_key = True)
+    NIDHORA = db.Column(db.Numeric(5,0), nullable = False, primary_key = True)
     CDESCHR = db.Column(db.VARCHAR(100), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
 
@@ -50,8 +51,8 @@ class chorars(db.Model):
         self.CSTATUS = CSTATUS
 
 class cmunics(db.Model):
-    NIDMUNI = db.Column(db.DECIMAL(4,0), nullable = False, primary_key = True)
-    NIDESTA = db.Column(db.DECIMAL(2,0), db.ForeignKey('cestads.NIDESTA'), nullable = False, primary_key = True)
+    NIDMUNI = db.Column(db.Numeric(4,0), nullable = False, primary_key = True)
+    NIDESTA = db.Column(db.Numeric(2,0), db.ForeignKey('cestads.NIDESTA'), nullable = False, primary_key = True)
     CNOMMUN = db.Column(db.VARCHAR(50), nullable = True)
 
     def __init__(self, NIDESTA, NIDMUNI, CNOMMUN):
@@ -71,8 +72,8 @@ class ddatemp(db.Model):
     CNUMINT = db.Column(db.VARCHAR(15), nullable = True)
     CCOLONI = db.Column(db.VARCHAR(50), nullable = True)
     CCODPOS = db.Column(db.CHAR(5), nullable = True)
-    NIDESTA = db.Column(db.DECIMAL(2,0), db.ForeignKey('cmunics.NIDESTA'), nullable = True)
-    NIDMUNI = db.Column(db.DECIMAL(4,0), db.ForeignKey('cmunics.NIDMUNI'), nullable = True)
+    NIDESTA = db.Column(db.Numeric(2,0), db.ForeignKey('cmunics.NIDESTA'), nullable = True)
+    NIDMUNI = db.Column(db.Numeric(4,0), db.ForeignKey('cmunics.NIDMUNI'), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
 
     def __init__(self, CCVEEMP, CNOMBRE, CAPEUNO, CAPEDOS, CCURPEM, DFECING, CNMCALL, CNUMEXT, CNUMINT, CCOLONI, CCODPOS, NIDESTA, NIDMUNI, CSTATUS):
@@ -92,8 +93,8 @@ class ddatemp(db.Model):
         self.CSTATUS = CSTATUS
 
 class ddethor(db.Model):
-    NIDHORA = db.Column(db.DECIMAL(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
-    NDIASEM = db.Column(db.DECIMAL(1,0), nullable = False, primary_key = True)
+    NIDHORA = db.Column(db.Numeric(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
+    NDIASEM = db.Column(db.Numeric(1,0), nullable = False, primary_key = True)
     CHORENT = db.Column(db.CHAR(5), nullable = True)
     CHORSAL = db.Column(db.CHAR(5), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
@@ -106,7 +107,7 @@ class ddethor(db.Model):
         self.CSTATUS = CSTATUS
 
 class dhremps(db.Model):
-    NIDHORA = db.Column(db.DECIMAL(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
+    NIDHORA = db.Column(db.Numeric(5,0), db.ForeignKey('chorars.NIDHORA'), nullable = False, primary_key = True)
     CCVEEMP = db.Column(db.CHAR(6), db.ForeignKey('ddatemp.CCVEEMP'), nullable = False, primary_key = True)
     DFECAIS = db.Column(db.DATE, nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
@@ -121,7 +122,7 @@ class dhremps(db.Model):
 class pregasi(db.Model):
     CCVEEMP = db.Column(db.CHAR(6), db.ForeignKey('ddatemp.CCVEEMP'), nullable = False, primary_key = True)
     DFECREG = db.Column(db.DATETIME, nullable = False, primary_key = True)
-    CNUMBIO = db.Column(db.DECIMAL(2,0), nullable = True)
+    CNUMBIO = db.Column(db.Numeric(2,0), nullable = True)
     CSTATUS = db.Column(db.CHAR(1), nullable = True)
 
     def __init__(self, CCVEEMP, DFECREG, CNUMBIO, CSTATUS):
@@ -275,7 +276,6 @@ def create_identif():
   return identif_schema.jsonify(new_identif)
 
 @app.route('/identifs', methods=['GET'])
-@jwt_required()
 def get_identifs():
   all_identifs = identif.query.all()
   result = identif_s_schema.dump(all_identifs)
@@ -324,8 +324,8 @@ def index():
 @app.route('/myuser/<CCVEEMP>', methods=['GET'])
 def get_user(CCVEEMP):
   ddatemp_v = ddatemp.query.get(CCVEEMP)
-  ddatemp_v = ddatemp.query.with_entities(ddatemp.CCVEEMP, ddatemp.CNOMBRE, ddatemp.CAPEUNO, ddatemp.CAPEDOS, ddatemp.CSTATUS).filter(ddatemp.CCVEEMP == CCVEEMP)
-  return ddatemp_schema.jsonify(ddatemp_v)
+  #ddatemp_v = ddatemp.query.with_entities(ddatemp.CCVEEMP, ddatemp.CNOMBRE, ddatemp.CAPEUNO, ddatemp.CAPEDOS, ddatemp.CSTATUS).filter(ddatemp.CCVEEMP == CCVEEMP)
+  return json.dumps(ddatemp_schema.dump(ddatemp_v))
 
 #endregion
 
@@ -350,7 +350,7 @@ def create_horario():
 def get_horarios():
   all_horarios = ddethor.query.all()
   result = ddethor_s_schema.dump(all_horarios)
-  return jsonify(result)
+  return json.dumps(result)
 
 @app.route('/horarios/<NDIASEM>/<NIDHORA>', methods=['GET'])
 def get_horario(NDIASEM, NIDHORA):
