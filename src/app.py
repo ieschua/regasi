@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt import JWT, jwt_required, current_identity
 from flask_cors import CORS, cross_origin
+from whitenoise import WhiteNoise
 import datetime
 import simplejson as json
 
@@ -26,7 +27,8 @@ import simplejson as json
 
 #region Configuración de conexión
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:hC5K*M0OSvrNjxaI@localhost/dbregasi' #Cadena de conexion
+app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://ufm6ohqpk3z6u01x:vmqMrny5SSm375jCdag0@bbz9acjqx8sgk9hqdcgl-mysql.services.clever-cloud.com:3306/bbz9acjqx8sgk9hqdcgl' #Cadena de conexion
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app) #Interactuar con la db
