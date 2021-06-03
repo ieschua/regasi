@@ -1,6 +1,8 @@
 #region Paquetes
 import hashlib
+from re import I
 from flask import Flask, request, jsonify, render_template
+from werkzeug.wrappers import response
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt import JWT, jwt_required, current_identity
@@ -20,6 +22,7 @@ import simplejson as json
 #? mysql+pymysql://root:hC5K*M0OSvrNjxaI@localhost/dbregasi
 
 #endregion
+
 
 #region Configuración de conexión
 app = Flask(__name__)
@@ -387,6 +390,48 @@ def delete_horario(NIDHORA, NDIASEM):
   db.session.commit()
   
   return json.dumps(ddethor_schema.dump(horario))
+
+#endregion
+
+#region registrar_asistencias
+
+@app.route('/registrar_asistencias', methods=['POST'])
+def create_asistencias():
+
+  pregasi_table = [[0 for c in range(5)] for r in range(50)]
+  tincemp_table = [[0 for c in range(5)] for r in range(50)]
+  new_asistencias = [[0 for c in range(1)] for r in range(50)]
+  new_incidencias = [[0 for c in range(1)] for r in range(50)]
+
+  for i in range(0, len(request.json)):
+      
+      # Creación de registros
+      pregasi_table[i][0] = request.json[i]['CCVEEMP']
+      pregasi_table[i][1] = request.json[i]['DFECREG']
+      pregasi_table[i][2] = request.json[i]['CNUMBIO']
+      pregasi_table[i][3] = request.json[i]['CSTATUS']
+
+      new_asistencias[i] = pregasi(pregasi_table[i][0], pregasi_table[i][1], pregasi_table[i][2], pregasi_table[i][3])
+      
+      db.session.add(new_asistencias[i])
+      db.session.commit()
+
+      #Creación de Incidencias
+
+      #new_incidencias[i] = tincemp(tincemp_table[i][0], tincemp_table[i][1], tincemp_table[i][2], tincemp_table[i][3])
+
+  horario = "SELECT ddethor.CHORENT, ddethor.CHORSAL FROM dhremps JOIN chorars ON (dhremps.NIDHORA = chorars.NIDHORA) JOIN ddethor ON (ddethor.NIDHORA = chorars.NIDHORA) WHERE CCVEEMP = 'A23456';"
+  #horario = db.select(ddethor.CHORENT, ddethor.CHORSAL)\
+   #   .join(chorars, dhremps.NIDHORA==chorars.NIDHORA)\
+    #  .join(ddethor, ddethor.NIDHORA==chorars.NIDHORA)\
+     # .where(dhremps.CCVEEMP == pregasi_table[0][0])
+
+  print(horario)
+  result = db.session.execute(horario)
+
+  print("lo que sale es esto: ", result)
+
+  return 'success'
 
 #endregion
 
