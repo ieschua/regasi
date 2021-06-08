@@ -28,7 +28,7 @@ import simplejson as json
 #region Configuración de conexión
 app = Flask(__name__)
 app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://ufm6ohqpk3z6u01x:vmqMrny5SSm375jCdag0@bbz9acjqx8sgk9hqdcgl-mysql.services.clever-cloud.com:3306/bbz9acjqx8sgk9hqdcgl' #Cadena de conexion
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:hC5K*M0OSvrNjxaI@localhost/dbregasi' #Cadena de conexion
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app) #Interactuar con la db
@@ -400,38 +400,86 @@ def delete_horario(NIDHORA, NDIASEM):
 @app.route('/registrar_asistencias', methods=['POST'])
 def create_asistencias():
 
-  pregasi_table = [[0 for c in range(5)] for r in range(50)]
-  tincemp_table = [[0 for c in range(5)] for r in range(50)]
-  new_asistencias = [[0 for c in range(1)] for r in range(50)]
-  new_incidencias = [[0 for c in range(1)] for r in range(50)]
+  dia = datetime.date.today() - datetime.timedelta(days=1)  
+  c_horario = db.session.query(dhremps.CCVEEMP, ddethor.CHORENT, ddethor.CHORSAL)\
+  .join(chorars, ddethor.NIDHORA==chorars.NIDHORA)\
+  .join(dhremps, dhremps.NIDHORA==chorars.NIDHORA)\
+  .filter((ddethor.NDIASEM == (dia.isoweekday())) and (ddethor.CSTATUS == "A"))
+
+  horario = db.session.execute(c_horario).fetchall()    
+  incidencia = [[0 for x in range(3)] for y in range(50)]
 
   for i in range(0, len(request.json)):
+      pregasi_table = [0 for c in range(4)]
+      tincemp_table = [0 for c in range(2)] 
       
       # Creación de registros
-      pregasi_table[i][0] = request.json[i]['CCVEEMP']
-      pregasi_table[i][1] = request.json[i]['DFECREG']
-      pregasi_table[i][2] = request.json[i]['CNUMBIO']
-      pregasi_table[i][3] = request.json[i]['CSTATUS']
+      pregasi_table[0] = request.json[i]['CCVEEMP']
+      pregasi_table[1] = request.json[i]['DFECREG']
+      pregasi_table[2] = request.json[i]['CNUMBIO']
+      pregasi_table[3] = request.json[i]['CSTATUS']
 
-      new_asistencias[i] = pregasi(pregasi_table[i][0], pregasi_table[i][1], pregasi_table[i][2], pregasi_table[i][3])
+      new_asistencia = pregasi(pregasi_table[0], pregasi_table[1], pregasi_table[2], pregasi_table[3])
       
-      db.session.add(new_asistencias[i])
+      db.session.add(new_asistencia)
       db.session.commit()
 
       #Creación de Incidencias
+      if any(pregasi_table[0] in x for x in incidencia):
+        usuario = next((i, j) for i, lst in enumerate(incidencia) 
+          for j, x in enumerate(lst) if x == pregasi_table[0])
+        usuario_h = next((i, j) for i, lst in enumerate(horario) 
+          for j, x in enumerate(lst) if x == pregasi_table[0])
+        incidencia[usuario[0]][2] = pregasi_table[1]
 
-      #new_incidencias[i] = tincemp(tincemp_table[i][0], tincemp_table[i][1], tincemp_table[i][2], tincemp_table[i][3])
+        entrada = datetime.datetime.strptime(incidencia[usuario[0]][1][-8:],"%H:%M:%S").time()
+        salida = datetime.datetime.strptime(incidencia[usuario[0]][2][-8:],"%H:%M:%S").time()
+        entrada_h = datetime.datetime.strptime(horario[usuario_h[0]][1][-8:],"%H:%M")
+        salida_h = datetime.datetime.strptime(horario[usuario_h[0]][2][-8:],"%H:%M")
 
-  horario = "SELECT ddethor.CHORENT, ddethor.CHORSAL FROM dhremps JOIN chorars ON (dhremps.NIDHORA = chorars.NIDHORA) JOIN ddethor ON (ddethor.NIDHORA = chorars.NIDHORA) WHERE CCVEEMP = 'A23456';"
-  #horario = db.select(ddethor.CHORENT, ddethor.CHORSAL)\
-   #   .join(chorars, dhremps.NIDHORA==chorars.NIDHORA)\
-    #  .join(ddethor, ddethor.NIDHORA==chorars.NIDHORA)\
-     # .where(dhremps.CCVEEMP == pregasi_table[0][0])
+        #Retardo Menor
+        if (entrada_h + datetime.timedelta(minutes=10)).time() < entrada and (entrada_h + datetime.timedelta(minutes=20)).time() > entrada:
+            tincemp_table[1] = "N"
+        #Retardo Mayor
+        elif (entrada_h + datetime.timedelta(minutes=20)).time() < entrada and (entrada_h + datetime.timedelta(minutes=30)).time() > entrada:
+            tincemp_table[1] = "Y"
+        #Falta por llegar tarde
+        elif (entrada_h + datetime.timedelta(minutes=30)).time() < entrada:
+            tincemp_table[1] = "T"
+        #Falta por salida anticipada
+        elif (salida_h + datetime.timedelta(minutes=15)).time() < salida:
+            tincemp_table[1] = "A"
+        #Falta por omisión de salida
+        elif (salida_h + datetime.timedelta(minutes=0)).time() > salida:
+            tincemp_table[1] = "O"
+        
+        tincemp_table[0] = datetime.datetime.today()
+        new_incidencias = tincemp(pregasi_table[0], tincemp_table[0], tincemp_table[1], "A") 
+        db.session.add(new_incidencias)
+        db.session.commit()
+        
+        entrada = None
+        salida = None
+        usuario = None
+        usuario_h = None
 
-  print(horario)
-  result = db.session.execute(horario)
+      else:
+        incidencia[i][0] = pregasi_table[0]
+        incidencia[i][1] = pregasi_table[1]
 
-  print("lo que sale es esto: ", result)
+      #Limpiar registros
+      pregasi_table.clear()
+      tincemp_table.clear()
+      new_asistencia = None
+      new_incidencia = None
+  
+  #Falta todo el dia
+  for i in range(0, len(incidencia)):
+      if incidencia[i][2] == 0 and incidencia[i][0] != 0:
+        new_incidencias = tincemp(incidencia[i][0], datetime.datetime.today(), "D", "A") 
+        db.session.add(new_incidencias)
+        db.session.commit()
+
 
   return 'success'
 
@@ -451,7 +499,6 @@ def index():
     return render_template("index.html")
 
 #endregion
-
 
 # Inicio de Aplicación
 if __name__ == "__main__":
